@@ -37,7 +37,7 @@ export const SAVE_KEY = 'stickman-escape-save';
 
 export const PLAYER = {
   SPRITE_WIDTH: 32,
-  SPRITE_HEIGHT: 48,
-  BODY_WIDTH: 24,
-  BODY_HEIGHT: 36,
+  SPRITE_HEIGHT: 32,
+  BODY_WIDTH: 18,
+  BODY_HEIGHT: 26,
 } as const;

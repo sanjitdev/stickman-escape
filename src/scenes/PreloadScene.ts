@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { GAME, PLAYER } from '@/core/Config';
+import { GAME } from '@/core/Config';
 
 export class PreloadScene extends Phaser.Scene {
   constructor() {
@@ -36,27 +36,72 @@ export class PreloadScene extends Phaser.Scene {
   }
 
   private loadSprites(): void {
-    // Only attempt to load real assets — failures leave BootScene placeholders intact.
-    // Phaser will fire 'loaderror' and skip replacing the texture on failure.
-    this.load.on('loaderror', (_file: Phaser.Loader.File) => {
-      // Placeholder from BootScene stays; nothing to do.
+    this.load.on('loaderror', (file: Phaser.Loader.File) => {
+      // Re-create a minimal placeholder so the key exists and animations don't crash.
+      if (!this.textures.exists(file.key)) {
+        const gfx = this.add.graphics().fillStyle(0x888888).fillRect(0, 0, 32, 32);
+        gfx.generateTexture(file.key, 32, 32);
+        gfx.destroy();
+      }
     });
-    const fw = PLAYER.SPRITE_WIDTH;
-    const fh = PLAYER.SPRITE_HEIGHT;
-    this.load.spritesheet('player', 'assets/sprites/player.png', { frameWidth: fw, frameHeight: fh });
-    this.load.spritesheet('enemy', 'assets/sprites/enemy.png', { frameWidth: 32, frameHeight: 32 });
-    this.load.image('tiles', 'assets/sprites/tiles.png');
-    this.load.image('coin', 'assets/sprites/coin.png');
-    this.load.image('key', 'assets/sprites/key.png');
-    this.load.image('door-closed', 'assets/sprites/door-closed.png');
-    this.load.image('door-open', 'assets/sprites/door-open.png');
-    this.load.image('platform-moving', 'assets/sprites/platform-moving.png');
-    this.load.image('platform-falling', 'assets/sprites/platform-falling.png');
-    this.load.image('portal', 'assets/sprites/portal.png');
+
+    // BootScene generates canvas-based placeholder textures so the game is
+    // playable without real assets. Phaser's loader skips any key that already
+    // exists in the TextureManager, so we must purge the placeholders first.
+    [
+      'player-idle', 'player-run', 'player-jump', 'player-fall',
+      'player-doublejump', 'player-walljump', 'player-hit',
+      'enemy', 'enemy-run', 'enemy-hit',
+      'fruit-apple', 'trap-saw', 'trap-spike',
+      'checkpoint', 'checkpoint-idle', 'checkpoint-out',
+      'tiles', 'key', 'door-closed', 'door-open',
+      'platform-moving', 'platform-falling', 'portal',
+      'bg-forest', 'bg-cave', 'bg-fortress',
+    ].forEach(k => this.textures.remove(k));
+
+    const sheet = (key: string, path: string, w: number, h: number) =>
+      this.load.spritesheet(key, `assets/sprites/${path}`, { frameWidth: w, frameHeight: h });
+
+    // ── Player (Pixel Adventure 1 — Virtual Guy, 32×32) ─────────────────────
+    // Each animation is its own horizontal strip; all @ 20 FPS.
+    sheet('player-idle',      'player-idle.png',      32, 32); // 11 frames
+    sheet('player-run',       'player-run.png',        32, 32); // 12 frames
+    sheet('player-jump',      'player-jump.png',       32, 32); //  1 frame
+    sheet('player-fall',      'player-fall.png',       32, 32); //  1 frame
+    sheet('player-doublejump','player-doublejump.png', 32, 32); //  6 frames
+    sheet('player-walljump',  'player-walljump.png',   32, 32); //  5 frames
+    sheet('player-hit',       'player-hit.png',        32, 32); //  7 frames
+
+    // ── Enemies ────────────────────────────────────────────────────────────
+    // PA1 Mushroom files (optional — fall back to enemy.png if absent)
+    sheet('enemy-run', 'enemy-run.png', 32, 32); // 14 frames (optional)
+    sheet('enemy-hit', 'enemy-hit.png', 32, 32); //  8 frames (optional)
+    // legacy / fallback 2-frame enemy sheet already present
+    sheet('enemy', 'enemy.png', 32, 32); // 2 frames
+
+    // ── Collectibles ─────────────────────────────────────────────────────────
+    sheet('fruit-apple', 'fruit-apple.png', 32, 32); // 17 frames (used for coins)
+
+    // ── Traps ────────────────────────────────────────────────────────────────
+    sheet('trap-saw', 'trap-saw.png', 38, 38); // 8 frames
+    this.load.image('trap-spike', 'assets/sprites/trap-spike.png');
+
+    // ── Checkpoints (64×64) ──────────────────────────────────────────────────
     this.load.image('checkpoint', 'assets/sprites/checkpoint.png');
-    this.load.image('bg-forest', 'assets/sprites/bg-forest.png');
-    this.load.image('bg-cave', 'assets/sprites/bg-cave.png');
-    this.load.image('bg-fortress', 'assets/sprites/bg-fortress.png');
+    sheet('checkpoint-idle', 'checkpoint-idle.png', 64, 64); // 10 frames
+    sheet('checkpoint-out',  'checkpoint-out.png',  64, 64); // 10 frames
+
+    // ── Static / misc ────────────────────────────────────────────────────────
+    this.load.image('tiles',          'assets/sprites/tiles.png');
+    this.load.image('key',            'assets/sprites/key.png');
+    this.load.image('door-closed',    'assets/sprites/door-closed.png');
+    this.load.image('door-open',      'assets/sprites/door-open.png');
+    this.load.image('platform-moving','assets/sprites/platform-moving.png');
+    this.load.image('platform-falling','assets/sprites/platform-falling.png');
+    this.load.image('portal',         'assets/sprites/portal.png');
+    this.load.image('bg-forest',      'assets/sprites/bg-forest.png');
+    this.load.image('bg-cave',        'assets/sprites/bg-cave.png');
+    this.load.image('bg-fortress',    'assets/sprites/bg-fortress.png');
   }
 
   private loadAudio(): void {
@@ -87,35 +132,53 @@ export class PreloadScene extends Phaser.Scene {
   }
 
   private createAnimations(): void {
-    // Frames: 0=idle, 1-2=run, 3=jump, 4=fall, 5=dash, 6=dead, 7=wall-slide
-    const playerTex = this.textures.get('player');
-    const hasPlayerFrames = playerTex.has(0);
+    const PA1_FPS = 20;
 
-    const anim = (key: string, frames: number[], rate: number, repeat = -1) => {
+    const anim = (
+      key: string,
+      textureKey: string,
+      start: number,
+      end: number,
+      rate = PA1_FPS,
+      repeat = -1,
+    ) => {
       if (this.anims.exists(key)) return;
-      const frameData = hasPlayerFrames
-        ? this.anims.generateFrameNumbers('player', { frames })
-        : frames.map(() => ({ key: 'player', frame: '__BASE' }));
-      this.anims.create({ key, frames: frameData, frameRate: rate, repeat });
+      const tex = this.textures.get(textureKey);
+      const hasFrames = tex.has(start);
+      this.anims.create({
+        key,
+        frames: hasFrames
+          ? this.anims.generateFrameNumbers(textureKey, { start, end })
+          : [{ key: textureKey, frame: '__BASE' }],
+        frameRate: rate,
+        repeat,
+      });
     };
 
-    anim('player-idle', [0], 1);
-    anim('player-run', [1, 2], 10);
-    anim('player-jump', [3], 1, 0);
-    anim('player-fall', [4], 1);
-    anim('player-dash', [5], 1, 0);
-    anim('player-dead', [6], 1, 0);
-    anim('player-wall-slide', [7], 1);
+    // ── Player ───────────────────────────────────────────────────────────────
+    anim('player-idle',       'player-idle',       0, 10);
+    anim('player-run',        'player-run',         0, 11);
+    anim('player-jump',       'player-jump',        0,  0, PA1_FPS, 0);
+    anim('player-fall',       'player-fall',        0,  0);
+    anim('player-doublejump', 'player-doublejump',  0,  5, PA1_FPS, 0);
+    anim('player-walljump',   'player-walljump',    0,  4, PA1_FPS, 0);
+    anim('player-wall-slide', 'player-walljump',    0,  0); // first frame only — slide hold
+    anim('player-dash',       'player-doublejump',  0,  5, PA1_FPS * 2, 0); // faster doublejump reused
+    anim('player-dead',       'player-hit',         0,  6, PA1_FPS, 0);
 
-    if (!this.anims.exists('enemy-walk')) {
-      const enemyTex = this.textures.get('enemy');
-      const hasEnemyFrames = enemyTex.has(0);
-      const enemyFrames = hasEnemyFrames
-        ? this.anims.generateFrameNumbers('enemy', { frames: [0, 1] })
-        : [{ key: 'enemy', frame: '__BASE' }];
-      this.anims.create({ key: 'enemy-walk', frames: enemyFrames, frameRate: 6,
-        repeat: -1,
-      });
-    }
+    // ── Enemy ────────────────────────────────────────────────────────────────
+    // Use PA1 Mushroom if loaded, otherwise the 2-frame fallback sheet
+    const hasEnemyRun = this.textures.get('enemy-run').frameTotal > 2;
+    anim('enemy-walk', hasEnemyRun ? 'enemy-run' : 'enemy', 0, hasEnemyRun ? 13 : 1);
+    anim('enemy-hit',  'enemy-hit', 0,  7, PA1_FPS, 0);
+
+    // ── Collectibles / traps ─────────────────────────────────────────────────
+    anim('fruit-spin',   'fruit-apple', 0, 16);
+    anim('trap-saw-spin','trap-saw',    0,  7);
+
+    // ── Checkpoint ───────────────────────────────────────────────────────────
+    anim('checkpoint-idle', 'checkpoint-idle', 0, 9);
+    // checkpoint-out strip is 1664×64 = 26 frames
+    anim('checkpoint-out',  'checkpoint-out',  0, 25, PA1_FPS, 0);
   }
 }

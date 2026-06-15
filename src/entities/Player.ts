@@ -35,7 +35,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   jumpCount = 0;
 
   constructor(scene: Phaser.Scene, x: number, y: number) {
-    super(scene, x, y, 'player');
+    super(scene, x, y, 'player-idle', 0);
     scene.add.existing(this as unknown as Phaser.GameObjects.GameObject);
     scene.physics.add.existing(this as unknown as Phaser.GameObjects.GameObject);
     this.setOrigin(0.5, 1);
