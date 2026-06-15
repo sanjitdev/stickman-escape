@@ -111,7 +111,6 @@ export class LevelSelectScene extends Phaser.Scene {
       container.add(div);
 
       // Level buttons inside card
-      const lvlCount = world.levels.length;
       const lvlSpacingY = 70;
       const lvlStartY = -cardH / 2 + 80;
 
