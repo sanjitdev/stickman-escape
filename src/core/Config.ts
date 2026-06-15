@@ -1,18 +1,20 @@
 export const PHYSICS = {
-  GRAVITY: 600,
-  RUN_SPEED: 200,
-  JUMP_VELOCITY: -500,
-  DOUBLE_JUMP_VELOCITY: -420,
-  WALL_JUMP: { x: 280, y: -460 },
-  DASH_SPEED: 650,
-  DASH_DURATION: 180,
-  DASH_COOLDOWN: 800,
-  WALL_SLIDE_VELOCITY: 80,
-  ACCELERATION: 1200,
-  DECELERATION: 1800,
-  COYOTE_TIME: 150,
+  GRAVITY: 1800,
+  RUN_SPEED: 220,
+  JUMP_VELOCITY: -900,
+  DOUBLE_JUMP_VELOCITY: -780,
+  WALL_JUMP: { x: 320, y: -860 },
+  DASH_SPEED: 700,
+  DASH_DURATION: 160,
+  DASH_COOLDOWN: 700,
+  WALL_SLIDE_VELOCITY: 100,
+  ACCELERATION: 1400,
+  DECELERATION: 2000,
+  COYOTE_TIME: 120,
   JUMP_BUFFER_TIME: 100,
-  VARIABLE_JUMP_MULTIPLIER: 0.5,
+  // Applied as extra body gravity (additive on top of world gravity)
+  FALL_GRAVITY_MULT: 2.0,   // faster descent — snappy landing
+  LOW_JUMP_GRAVITY_MULT: 1.5, // faster cut when button released early
 } as const;
 
 export const GAME = {

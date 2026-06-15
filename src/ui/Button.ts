@@ -10,8 +10,16 @@ interface ButtonConfig {
 }
 
 export class Button extends Phaser.GameObjects.Container {
+  // kept for API compat
   private readonly bg: Phaser.GameObjects.Image;
   private readonly label: Phaser.GameObjects.Text;
+  private readonly fill: Phaser.GameObjects.Graphics;
+  private readonly glowRing: Phaser.GameObjects.Graphics;
+  private readonly shimmer: Phaser.GameObjects.Graphics;
+  /** Inner container holding all visuals — scaled instead of the outer container
+   *  so the hit-area rectangle (owned by the outer) is never distorted. */
+  private readonly visuals: Phaser.GameObjects.Container;
+  private hoverTween: Phaser.Tweens.Tween | null = null;
 
   constructor(scene: Phaser.Scene, x: number, y: number, config: ButtonConfig) {
     super(scene, x, y);
@@ -19,44 +27,107 @@ export class Button extends Phaser.GameObjects.Container {
 
     const w = config.width ?? 200;
     const h = config.height ?? 50;
+    const r = 10;
 
-    this.bg = scene.add.image(0, 0, scene.textures.exists('btn-normal') ? 'btn-normal' : '__DEFAULT');
-    this.bg.setDisplaySize(w, h);
+    // ── Inner visuals container (this is what gets scaled, not `this`) ────────
+    this.visuals = scene.add.container(0, 0);
+    this.add(this.visuals);
 
-    // Fallback if texture missing
-    if (!scene.textures.exists('btn-normal')) {
-      const gfx = scene.add.graphics();
-      gfx.fillStyle(0x4a6fa5);
-      gfx.fillRoundedRect(-w / 2, -h / 2, w, h, 8);
-      gfx.lineStyle(2, 0x7eb3e8);
-      gfx.strokeRoundedRect(-w / 2, -h / 2, w, h, 8);
-      this.add(gfx);
-    } else {
-      this.add(this.bg);
+    // Glow ring
+    this.glowRing = scene.make.graphics({}).setAlpha(0);
+    for (let i = 3; i > 0; i--) {
+      this.glowRing.lineStyle(i * 2, 0x5599ff, 0.12 * (4 - i));
+      this.glowRing.strokeRoundedRect(-w / 2 - i * 2, -h / 2 - i * 2, w + i * 4, h + i * 4, r + i);
     }
+    this.visuals.add(this.glowRing);
 
-    this.label = scene.add.text(0, 0, config.text, {
-      fontSize: `${config.fontSize ?? 20}px`,
-      color: '#ffffff',
-      fontFamily: 'Arial, sans-serif',
+    // Fill
+    this.fill = scene.make.graphics({});
+    this.drawIdle(w, h, r);
+    this.visuals.add(this.fill);
+
+    // Shimmer
+    this.shimmer = scene.make.graphics({}).setAlpha(0);
+    this.shimmer.fillStyle(0xffffff, 0.10);
+    this.shimmer.fillRoundedRect(-w / 2 + 2, -h / 2 + 2, w - 4, h / 2 - 2, { tl: r - 1, tr: r - 1, bl: 0, br: 0 });
+    this.visuals.add(this.shimmer);
+
+    // Label
+    this.label = scene.make.text({
+      x: 0, y: 0,
+      text: config.text,
+      style: {
+        fontSize: `${config.fontSize ?? 20}px`,
+        color: '#e8f4ff',
+        fontFamily: 'Arial, sans-serif',
+        stroke: '#000000',
+        strokeThickness: 1,
+      },
     }).setOrigin(0.5);
+    this.visuals.add(this.label);
 
-    this.add(this.label);
+    // Hidden image (API compat — not added to scene)
+    this.bg = scene.make.image({ key: '__DEFAULT' }).setVisible(false);
+
+    // ── Hit area lives on the OUTER container at fixed scale 1 ───────────────
     this.setSize(w, h);
-    // Hit area must be centered on the container's local origin
     this.setInteractive(
       new Phaser.Geom.Rectangle(-w / 2, -h / 2, w, h),
       Phaser.Geom.Rectangle.Contains,
     );
 
-    this.on('pointerover', () => this.setScale(1.05));
-    this.on('pointerout', () => this.setScale(1.0));
-    this.on('pointerdown', () => this.setScale(0.97));
+    // ── Events ────────────────────────────────────────────────────────────────
+    this.on('pointerover', () => {
+      this.drawHover(w, h, r);
+      scene.tweens.add({ targets: [this.glowRing, this.shimmer], alpha: 1, duration: 120, ease: 'Quad.easeOut' });
+      scene.tweens.add({ targets: this.visuals, scaleX: 1.06, scaleY: 1.06, duration: 120, ease: 'Back.easeOut' });
+      scene.tweens.add({ targets: this.label, y: -1, duration: 120 });
+    });
+
+    this.on('pointerout', () => {
+      this.drawIdle(w, h, r);
+      scene.tweens.add({ targets: [this.glowRing, this.shimmer], alpha: 0, duration: 180 });
+      scene.tweens.add({ targets: this.visuals, scaleX: 1, scaleY: 1, duration: 180, ease: 'Quad.easeOut' });
+      scene.tweens.add({ targets: this.label, y: 0, duration: 180 });
+    });
+
+    this.on('pointerdown', () => {
+      this.drawPressed(w, h, r);
+      scene.tweens.add({ targets: this.visuals, scaleX: 0.96, scaleY: 0.96, duration: 80, ease: 'Quad.easeOut' });
+      scene.tweens.add({ targets: this.label, y: 2, duration: 80 });
+    });
+
     this.on('pointerup', () => {
-      this.setScale(1.05);
+      this.drawHover(w, h, r);
+      scene.tweens.add({ targets: this.visuals, scaleX: 1.06, scaleY: 1.06, duration: 100, ease: 'Back.easeOut' });
+      scene.tweens.add({ targets: this.label, y: -1, duration: 100 });
       audioSystem.playSfx('sfx-click');
       config.onClick();
     });
+  }
+
+  private drawIdle(w: number, h: number, r: number): void {
+    this.fill.clear();
+    this.fill.fillGradientStyle(0x1a3050, 0x1a3050, 0x0d1e35, 0x0d1e35);
+    this.fill.fillRoundedRect(-w / 2, -h / 2, w, h, r);
+    this.fill.lineStyle(1.5, 0x3a6090, 0.9);
+    this.fill.strokeRoundedRect(-w / 2, -h / 2, w, h, r);
+  }
+
+  private drawHover(w: number, h: number, r: number): void {
+    this.fill.clear();
+    this.fill.fillGradientStyle(0x2a5080, 0x2a5080, 0x162840, 0x162840);
+    this.fill.fillRoundedRect(-w / 2, -h / 2, w, h, r);
+    this.fill.lineStyle(2, 0x5599ee, 1.0);
+    this.fill.strokeRoundedRect(-w / 2, -h / 2, w, h, r);
+  }
+
+  private drawPressed(w: number, h: number, r: number): void {
+    this.fill.clear();
+    this.fill.fillGradientStyle(0x0d1e35, 0x0d1e35, 0x1a3050, 0x1a3050);
+    this.fill.fillRoundedRect(-w / 2, -h / 2, w, h, r);
+    this.fill.lineStyle(2, 0x7ab8ff, 1.0);
+    this.fill.strokeRoundedRect(-w / 2, -h / 2, w, h, r);
   }
 
   setText(text: string): void {

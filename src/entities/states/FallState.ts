@@ -14,8 +14,13 @@ export class FallState extends PlayerState {
   update(dt: number, input: InputState): void {
     void dt;
     const { player } = this;
+    const body = player.arcadeBody;
+
+    // Always apply fall gravity multiplier while descending
+    body.setGravityY(PHYSICS.GRAVITY * (PHYSICS.FALL_GRAVITY_MULT - 1));
 
     if (player.onGround) {
+      body.setGravityY(0);
       player.resetJumpCount();
       player.emitEvent('land');
       if (input.jumpBuffered) {
@@ -32,6 +37,7 @@ export class FallState extends PlayerState {
     // Coyote jump
     if (input.jumpPressed && !this.coyoteUsed && player.coyoteActive) {
       this.coyoteUsed = true;
+      body.setGravityY(0);
       player.consumeJump();
       player.switchTo('jump');
       return;
@@ -39,6 +45,7 @@ export class FallState extends PlayerState {
 
     // Double jump while falling (jumpCount 0 means we fell off a ledge)
     if (input.jumpPressed && player.jumpCount === 0) {
+      body.setGravityY(0);
       player.consumeJump();
       player.setVelocityY(PHYSICS.DOUBLE_JUMP_VELOCITY);
       player.incrementJumpCount();
@@ -47,11 +54,13 @@ export class FallState extends PlayerState {
     }
 
     if (input.dashPressed && player.canDash) {
+      body.setGravityY(0);
       player.switchTo('dash');
       return;
     }
 
     if (player.wallDirection !== null) {
+      body.setGravityY(0);
       player.switchTo('wallSlide');
       return;
     }
@@ -64,5 +73,9 @@ export class FallState extends PlayerState {
       player.setFlipX(false);
       player.setVelocityX(PHYSICS.RUN_SPEED);
     }
+  }
+
+  exit(): void {
+    this.player.arcadeBody.setGravityY(0);
   }
 }
