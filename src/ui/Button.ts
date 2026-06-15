@@ -10,16 +10,11 @@ interface ButtonConfig {
 }
 
 export class Button extends Phaser.GameObjects.Container {
-  // kept for API compat
-  private readonly bg: Phaser.GameObjects.Image;
   private readonly label: Phaser.GameObjects.Text;
   private readonly fill: Phaser.GameObjects.Graphics;
   private readonly glowRing: Phaser.GameObjects.Graphics;
   private readonly shimmer: Phaser.GameObjects.Graphics;
-  /** Inner container holding all visuals — scaled instead of the outer container
-   *  so the hit-area rectangle (owned by the outer) is never distorted. */
   private readonly visuals: Phaser.GameObjects.Container;
-  private hoverTween: Phaser.Tweens.Tween | null = null;
 
   constructor(scene: Phaser.Scene, x: number, y: number, config: ButtonConfig) {
     super(scene, x, y);
@@ -67,7 +62,7 @@ export class Button extends Phaser.GameObjects.Container {
     this.visuals.add(this.label);
 
     // Hidden image (API compat — not added to scene)
-    this.bg = scene.make.image({ key: '__DEFAULT' }).setVisible(false);
+    // (no unused bg image)
 
     // ── Hit area lives on the OUTER container at fixed scale 1 ───────────────
     this.setSize(w, h);

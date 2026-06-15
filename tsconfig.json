@@ -1,6 +1,5 @@
 {
   "compilerOptions": {
-    "ignoreDeprecations": "6.0",
     "forceConsistentCasingInFileNames": true,
     "target": "ESNext",
     "module": "ESNext",
@@ -9,10 +8,9 @@
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
-    "baseUrl": ".",
-    "paths": { "@/*": ["src/*"] },
+    "paths": { "@/*": ["./src/*"] },
     "skipLibCheck": true,
-    "sourceMap": true
+    "noEmit": true
   },
   "include": ["src/**/*", "tests/**/*", "vite.config.ts"],
   "exclude": ["node_modules", "dist"]

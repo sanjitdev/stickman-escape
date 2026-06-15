@@ -7,9 +7,13 @@ dist-ssr/
 
 # Vite cache
 .vite/
+.cache/
 
 # TypeScript
 *.tsbuildinfo
+# tsc accidental emits inside src (noEmit should prevent these)
+src/**/*.js
+src/**/*.js.map
 
 # Test coverage
 coverage/
@@ -28,6 +32,19 @@ pnpm-debug.log*
 
 # Editor
 .vscode/settings.json
+.vscode/launch.json
+*.swp
+*.swo
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Husky
+.husky/_/
+
 .idea/
 *.suo
 *.ntvs*

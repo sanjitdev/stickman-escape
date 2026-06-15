@@ -160,8 +160,8 @@ export class LevelSelectScene extends Phaser.Scene {
         container.add(starsText);
 
         // Best time
-        if (stats?.timeMs) {
-          const secs = Math.floor(stats.timeMs / 1000);
+        if (stats?.bestTime) {
+          const secs = Math.floor(stats.bestTime / 1000);
           const timeStr = `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}`;
           const timeLabel = this.add.text(-cardW / 2 + 76, ly - 8, `⏱ ${timeStr}`, {
             fontSize: '12px', color: '#6699aa', fontFamily: 'Arial, sans-serif',

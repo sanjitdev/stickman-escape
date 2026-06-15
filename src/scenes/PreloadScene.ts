@@ -104,26 +104,8 @@ export class PreloadScene extends Phaser.Scene {
     this.load.image('bg-fortress',    'assets/sprites/bg-fortress.png');
   }
 
-  private loadAudio(): void {
-    // Audio files are optional — silently skip loading if missing.
-    // The AudioSystem checks cache.audio.has() before playing, so
-    // missing audio simply produces silence.
-    const music = ['music-forest', 'music-cave', 'music-fortress'];
-    const sfx = [
-      'sfx-jump', 'sfx-double-jump', 'sfx-land', 'sfx-dash',
-      'sfx-coin', 'sfx-key', 'sfx-death', 'sfx-checkpoint',
-      'sfx-door', 'sfx-stomp', 'sfx-portal', 'sfx-click',
-    ];
-    const checkExists = async (url: string) => {
-      try {
-        const r = await fetch(url, { method: 'HEAD' });
-        return r.ok;
-      } catch { return false; }
-    };
-    void checkExists; // async check not needed — just load and let loaderror suppress
-    music.forEach((k) => this.load.audio(k, [`assets/audio/${k}.ogg`, `assets/audio/${k}.mp3`]));
-    sfx.forEach((k) => this.load.audio(k, [`assets/audio/${k}.ogg`, `assets/audio/${k}.mp3`]));
-  }
+  // loadAudio is intentionally unused — audio loading deferred or removed
+  // private loadAudio(): void {}
 
   private loadLevelData(): void {
     for (let i = 1; i <= 7; i++) {
@@ -144,7 +126,7 @@ export class PreloadScene extends Phaser.Scene {
     ) => {
       if (this.anims.exists(key)) return;
       const tex = this.textures.get(textureKey);
-      const hasFrames = tex.has(start);
+      const hasFrames = tex.has(String(start));
       this.anims.create({
         key,
         frames: hasFrames
